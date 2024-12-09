@@ -1,21 +1,25 @@
 $(document).ready(function () {
-	let students = [];
+	// Retrieve students from localStorage
+	let students = getStore();
+
 	let editingIndex = null;
 
-	// Hiển thị popup
+	updateTable();
+
+	// Show popup to add a new student
 	$("#add-new-btn").on("click", function () {
 		resetForm();
 		$("#popup").show();
 		$(".popup-overlay").show();
 	});
 
-	// Ẩn popup
+	// Hide popup
 	$("#cancel-btn, .popup-overlay").on("click", function () {
 		$("#popup").hide();
 		$(".popup-overlay").hide();
 	});
 
-	// Lưu thông tin học sinh
+	// Save student information
 	$("#student-form").on("submit", function (e) {
 		e.preventDefault();
 
@@ -27,6 +31,7 @@ $(document).ready(function () {
 		const chemistry = parseFloat($("#chemistry").val());
 		const average = ((math + physics + chemistry) / 3).toFixed(2);
 
+		// Check if we're editing an existing student
 		if (editingIndex !== null) {
 			students[editingIndex] = {
 				name,
@@ -39,19 +44,34 @@ $(document).ready(function () {
 			};
 			editingIndex = null;
 		} else {
-			students.push({ name, gender, email, math, physics, chemistry, average });
+			const student = {
+				id: Date.now(),
+				name,
+				gender,
+				email,
+				math,
+				physics,
+				chemistry,
+				average,
+			};
+			console.log("stu", student);
+			students.push(student);
 		}
 
+		setStore(students);
+
+		// Update table and reset form
 		updateTable();
 		resetForm();
 		$("#popup").hide();
 		$(".popup-overlay").hide();
 	});
 
-	// Cập nhật bảng
+	// Update the table with the current students data
 	function updateTable() {
 		const tbody = $("#student-table tbody");
 		tbody.empty();
+
 		let totalMath = 0,
 			totalPhysics = 0,
 			totalChemistry = 0;
@@ -62,24 +82,25 @@ $(document).ready(function () {
 			totalChemistry += student.chemistry;
 
 			tbody.append(`
-        <tr>
-          <td><input type="checkbox" class="row-checkbox"></td>
-          <td>${index + 1}</td>
-          <td>${student.name}</td>
-          <td>${student.gender}</td>
-          <td>${student.email}</td>
-          <td>${student.math}</td>
-          <td>${student.physics}</td>
-          <td>${student.chemistry}</td>
-          <td>${student.average}</td>
-          <td>
-            <button class="edit-btn" data-index="${index}">Chỉnh sửa</button>
-            <button class="delete-btn" data-index="${index}">Xoá</button>
-          </td>
-        </tr>
-      `);
+		  <tr>
+			<td><input type="checkbox" class="row-checkbox"></td>
+			<td>${index + 1}</td>
+			<td>${student.name}</td>
+			<td>${student.gender}</td>
+			<td>${student.email}</td>
+			<td>${student.math}</td>
+			<td>${student.physics}</td>
+			<td>${student.chemistry}</td>
+			<td>${student.average}</td>
+			<td>
+			  <button class="edit-btn" data-index="${index}">Edit</button>
+			  <button class="delete-btn" data-index="${index}">Delete</button>
+			</td>
+		  </tr>
+		`);
 		});
 
+		// Update averages
 		$("#avg-math").text((totalMath / students.length || 0).toFixed(2));
 		$("#avg-physics").text((totalPhysics / students.length || 0).toFixed(2));
 		$("#avg-chemistry").text(
@@ -92,7 +113,7 @@ $(document).ready(function () {
 		);
 	}
 
-	// Xử lý chỉnh sửa
+	// Handle student edit
 	$(document).on("click", ".edit-btn", function () {
 		editingIndex = $(this).data("index");
 		const student = students[editingIndex];
@@ -108,31 +129,43 @@ $(document).ready(function () {
 		$(".popup-overlay").show();
 	});
 
-	// Xóa học sinh
+	// Handle student delete
 	$(document).on("click", ".delete-btn", function () {
-		if (confirm("Bạn có chắc chắn muốn xoá?")) {
+		if (confirm("Are you sure you want to delete?")) {
 			const index = $(this).data("index");
 			students.splice(index, 1);
+			setStore(students);
 			updateTable();
 		}
 	});
 
-	// Check all
+	// Handle "check all" functionality
 	$("#check-all").on("change", function () {
 		$(".row-checkbox").prop("checked", this.checked);
 	});
 
-	// Xóa nhiều dòng
+	// Delete selected students
 	$("#delete-selected-btn").on("click", function () {
 		students = students.filter(
-			(_, index) => !$(`.row-checkbox:eq(${index})`).prop("checked")
+			(_, index) => !$(".row-checkbox:eq(" + index + ")").prop("checked")
 		);
-		updateTable();
+		setStore(students); // Save updated list
+		updateTable(); // Refresh table
 	});
 
-	// Reset form
+	// Reset form inputs
 	function resetForm() {
 		$("#student-form")[0].reset();
 		editingIndex = null;
 	}
 });
+
+// Helper functions to manage localStorage
+const getStore = () => {
+	const data = localStorage.getItem("store");
+	return data ? JSON.parse(data) : [];
+};
+
+const setStore = (data) => {
+	localStorage.setItem("store", JSON.stringify(data));
+};
